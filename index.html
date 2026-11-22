@@ -1,0 +1,95 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#74a891"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><title>Trouvailles de médiathèque</title>
+<style>
+:root{box-sizing:border-box;--bg:#fbfdfb;--card:#fff;--ink:#26332d;--mut:#6b7d74;--pri:#74a891;--dk:#2f5d4e;--soft:#eef6f1;--line:#e3ede7;--warn:#b5524a;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a221e;--card:#232d28;--ink:#e6efe9;--mut:#9db1a6;--pri:#7fb39b;--dk:#a9d4c0;--soft:#2c3a34;--line:#37463f;--warn:#e08a82}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,sans-serif;min-height:100vh}
+#app{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:12px 16px 96px}
+h1,h2,h3{color:var(--dk);margin:.4em 0}h1{font-size:1.5rem}h3{font-size:1.05rem}
+.top{display:flex;align-items:center;gap:8px;justify-content:space-between}.mut{color:var(--mut)}.c{text-align:center}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:4px 0}
+textarea{min-height:84px}label.l{display:block;font-weight:600;margin-top:12px;color:var(--dk)}
+button,.b{font:inherit;border:0;border-radius:12px;background:var(--pri);color:#fff;padding:10px 16px;cursor:pointer;display:inline-block}
+.b.s,button.s{background:var(--soft);color:var(--dk)}.b.w,button.w{background:var(--warn)}
+.ic{background:var(--soft);color:var(--dk);padding:8px 12px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:8px 0}.ch{background:var(--soft);color:var(--dk);white-space:nowrap;padding:6px 12px;border-radius:99px}.ch.on{background:var(--pri);color:#fff}
+.cd{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px;margin:10px 0;cursor:pointer}
+.cd img,.ph{width:64px;height:64px;border-radius:12px;object-fit:cover;flex:none}.ph{background:var(--soft);display:grid;place-items:center;font-size:28px}
+.in{flex:1;min-width:0;display:flex;flex-direction:column}.in small{color:var(--mut)}
+.bd{align-self:flex-start;font-size:.75rem;padding:2px 8px;border-radius:99px;background:var(--soft);color:var(--dk);margin-top:4px}.bd.done{background:var(--pri);color:#fff}
+.hb{background:none;color:var(--pri);font-size:1.4rem;padding:4px}
+.fab{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:50%;font-size:2rem;padding:0;box-shadow:0 4px 14px #0003;z-index:5}
+.strip{display:flex;gap:8px;overflow-x:auto;padding:6px 0}.th{position:relative;flex:none}.th img{width:84px;height:84px;object-fit:cover;border-radius:12px;display:block}
+.th button{position:absolute;top:2px;right:2px;padding:0 7px;border-radius:50%;background:#000a;font-size:.9rem}
+label.add,label.b{position:relative;overflow:hidden}label input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;padding:0;border:0;cursor:pointer}
+.add{flex:none;width:84px;height:84px;border:2px dashed var(--pri);border-radius:12px;display:grid;place-items:center;color:var(--pri);font-size:1.4rem;cursor:pointer}
+.box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px;margin:10px 0}.row{display:flex;gap:8px;align-items:center}.em{width:64px;text-align:center}
+.pre{white-space:pre-wrap}.view .strip img{cursor:zoom-in}
+#lb{position:fixed;inset:0;background:#000d;display:grid;place-items:center;z-index:20}#lb img{max-width:96%;max-height:92%}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:var(--dk);color:#fff;padding:8px 16px;border-radius:99px;z-index:30}
+</style></head><body>
+<div id="app"></div>
+<script>
+const $=s=>document.querySelector(s),E=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const FD=[["done","Produit fini",0],["mat","Matériel / fournitures",1],["steps","Instructions / étapes",1],["notes","Notes et astuces",1]];
+let S={cats:[{id:"c1",emoji:"🔨",name:"Bricolage & DIY",fields:["Difficulté","Durée"]},{id:"c2",emoji:"🎨",name:"Créations",fields:["Technique"]},{id:"c3",emoji:"🌱",name:"Jardinage",fields:["Saison","Exposition"]},{id:"c4",emoji:"💡",name:"Idées & astuces",fields:[]}],fiches:[]};
+let v="list",q="",fc="",fav=0,F=null,cur=null,db,arm="";
+const uid=()=>Math.random().toString(36).slice(2,8)+Date.now().toString(36);
+const cat=id=>S.cats.find(c=>c.id===id)||{name:"Sans catégorie",emoji:"📖",fields:[]};
+const cf=id=>S.fiches.find(f=>f.id===id);
+const idb=()=>new Promise(r=>{try{const o=indexedDB.open("mediatheque",1);o.onupgradeneeded=()=>o.result.createObjectStore("kv");o.onsuccess=()=>{db=o.result;r()};o.onerror=()=>r()}catch(e){r()}});
+const load=()=>new Promise(r=>{if(!db)return r();try{const g=db.transaction("kv").objectStore("kv").get("S");g.onsuccess=()=>r(g.result);g.onerror=()=>r()}catch(e){r()}});
+const save=()=>{try{db&&db.transaction("kv","readwrite").objectStore("kv").put(S,"S")}catch(e){}};
+function toast(t){const d=document.createElement("div");d.id="toast";d.textContent=t;document.body.append(d);setTimeout(()=>d.remove(),2200)}
+const shrink=f=>new Promise((ok,ko)=>{const r=new FileReader();r.onerror=ko;r.onload=()=>{const i=new Image();i.onerror=ko;i.onload=()=>{const k=Math.min(1,1280/Math.max(i.width,i.height)),c=document.createElement("canvas");c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);c.getContext("2d").drawImage(i,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",.8))};i.src=r.result};r.readAsDataURL(f)});
+const blank=()=>({id:uid(),cat:S.cats[0]?S.cats[0].id:"",title:"",book:"",author:"",page:"",ph:{done:[],mat:[],steps:[],notes:[]},tx:{mat:"",steps:"",notes:""},ex:{},tags:[],st:"todo",fav:0,ts:0});
+const head=(t,back)=>`<div class="top">${back?`<button class="ic" data-a="${back}">‹</button>`:""}<h1>${t}</h1>${v==="list"?`<button class="ic" data-a="admin" aria-label="Administration">⚙️</button>`:"<span></span>"}</div>`;
+const thumb=f=>{for(const d of FD){if(f.ph[d[0]][0])return f.ph[d[0]][0]}return""};
+function cards(){const t=q.toLowerCase(),L=S.fiches.filter(f=>(!fc||f.cat===fc)&&(!fav||f.fav)&&(!t||[f.title,f.book,f.author,(f.tags||[]).join(" "),f.tx.mat,f.tx.steps,f.tx.notes].join(" ").toLowerCase().includes(t))).sort((a,b)=>b.ts-a.ts);
+return L.length?L.map(f=>`<div class="cd" data-a="open" data-i="${f.id}">${thumb(f)?`<img src="${thumb(f)}" alt="">`:`<div class="ph">${E(cat(f.cat).emoji)}</div>`}<div class="in"><b>${E(f.title)}</b><small>${E(cat(f.cat).name)}${f.book?" · "+E(f.book):""}</small><span class="bd ${f.st}">${f.st==="done"?"Réalisé":"À faire"}</span></div><button class="hb" data-a="fav" data-i="${f.id}" aria-label="Favori">${f.fav?"♥":"♡"}</button></div>`).join(""):`<p class="mut c">Aucune fiche pour l’instant. Touche + pour en créer une.</p>`}
+const upd=()=>{const l=$("#lst");if(l)l.innerHTML=cards()};
+const rList=()=>head("Mes trouvailles")+`<input id="q" type="search" placeholder="Rechercher (titre, livre, étiquette…)" value="${E(q)}"><div class="chips"><button class="ch ${!fc&&!fav?"on":""}" data-a="chip" data-i="">Toutes</button><button class="ch ${fav?"on":""}" data-a="favf">♥ Favoris</button>${S.cats.map(c=>`<button class="ch ${fc===c.id?"on":""}" data-a="chip" data-i="${c.id}">${E(c.emoji)} ${E(c.name)}</button>`).join("")}</div><div id="lst">${cards()}</div><button class="fab" data-a="new" aria-label="Nouvelle fiche">+</button>`;
+const strip=(o,k,ed)=>`<div class="strip">${o.ph[k].map((s,i)=>`<div class="th"><img src="${s}" alt="" data-a="zoom" data-k="${k}" data-i="${i}">${ed?`<button data-a="rmp" data-k="${k}" data-i="${i}" aria-label="Retirer">×</button>`:""}</div>`).join("")}${ed?`<label class="add">＋📷<input type="file" accept="image/*" multiple data-p="${k}"></label>`:""}</div>`;
+function rEdit(){const ex=cat(F.cat).fields;return head(S.fiches.some(f=>f.id===F.id)?"Modifier la fiche":"Nouvelle fiche","cancel")+`
+<label class="l">Titre</label><input data-k="title" value="${E(F.title)}" placeholder="Ex. : Porte-clés en macramé">
+<label class="l">Catégorie</label><select data-k="cat">${S.cats.map(c=>`<option value="${c.id}" ${c.id===F.cat?"selected":""}>${E(c.emoji)} ${E(c.name)}</option>`).join("")}</select>
+<label class="l">Livre source</label><input data-k="book" value="${E(F.book)}" placeholder="Titre du livre"><div class="row"><input data-k="author" value="${E(F.author)}" placeholder="Auteur"><input data-k="page" value="${E(F.page)}" placeholder="Page" style="width:90px"></div>
+${ex.map(x=>`<label class="l">${E(x)}</label><input data-x="${E(x)}" value="${E(F.ex[x]||"")}">`).join("")}
+${FD.map(d=>`<label class="l">${d[1]}</label>${d[2]?`<textarea data-t="${d[0]}">${E(F.tx[d[0]])}</textarea>`:""}${strip(F,d[0],1)}`).join("")}
+<label class="l">Étiquettes</label><input data-g value="${E(F.tags.join(", "))}" placeholder="séparées par des virgules">
+<label class="l">Statut</label><select data-k="st"><option value="todo" ${F.st==="todo"?"selected":""}>À faire</option><option value="done" ${F.st==="done"?"selected":""}>Réalisé</option></select>
+<div class="row" style="margin-top:18px"><button data-a="save" style="flex:1">Enregistrer</button><button class="s" data-a="cancel">Annuler</button></div>`}
+function rView(){const f=cf(cur);if(!f){v="list";return rList()}const c=cat(f.cat);return head(E(f.title),"home")+`<div class="view"><p class="mut">${E(c.emoji)} ${E(c.name)}${f.book?` · 📖 ${E(f.book)}`:""}${f.author?`, ${E(f.author)}`:""}${f.page?` (p. ${E(f.page)})`:""}</p>
+${c.fields.filter(x=>f.ex[x]).map(x=>`<p><b>${E(x)} :</b> ${E(f.ex[x])}</p>`).join("")}
+${FD.map(d=>{const t=d[2]?f.tx[d[0]]:"";return t||f.ph[d[0]].length?`<h3>${d[1]}</h3>${t?`<p class="pre">${E(t)}</p>`:""}${strip(f,d[0],0)}`:""}).join("")}
+${f.tags.length?`<p class="mut">${f.tags.map(t=>"#"+E(t)).join(" ")}</p>`:""}
+<div class="row" style="margin-top:18px;flex-wrap:wrap"><button data-a="st">${f.st==="done"?"↩︎ Remettre à faire":"✓ Marquer réalisé"}</button><button class="s" data-a="edit">Modifier</button><button class="w" data-a="delf">${arm==="f"?"Confirmer ?":"Supprimer"}</button></div></div>`}
+function rAdmin(){const n=S.fiches.reduce((a,f)=>a+FD.reduce((b,d)=>b+f.ph[d[0]].length,0),0);return head("Administration","home")+`<h3>Catégories</h3><p class="mut">Les champs supplémentaires apparaissent dans les fiches de la catégorie.</p>`+S.cats.map(c=>`<div class="box" data-c="${c.id}"><div class="row"><input class="em" value="${E(c.emoji)}" data-ck="emoji"><input value="${E(c.name)}" data-ck="name"><button class="w" data-a="delc" data-i="${c.id}">${arm===c.id?"Sûr ?":"🗑"}</button></div><input placeholder="Champs supplémentaires, séparés par des virgules" value="${E(c.fields.join(", "))}" data-ck="fields"></div>`).join("")+`<div class="box"><div class="row"><input id="nce" class="em" placeholder="🌿"><input id="ncn" placeholder="Nouvelle catégorie"><button data-a="addc">＋</button></div></div>
+<h3>Sauvegarde</h3><p class="mut">${S.fiches.length} fiche(s), ${n} photo(s), stockées sur ce téléphone. Exporte régulièrement un fichier de secours.</p><div class="row"><button data-a="exp">Exporter</button><label class="b s">Importer<input type="file" accept=".json,application/json" id="imp"></label></div>`}
+function render(keep){$("#app").innerHTML=({list:rList,edit:rEdit,view:rView,admin:rAdmin})[v]();if(!keep)scrollTo(0,0)}
+const go=(x,keep)=>{v=x;arm="";render(keep)};
+const askArm=k=>{if(arm===k)return 1;arm=k;render(1)};
+document.addEventListener("click",async e=>{const t=e.target.closest("[data-a]");if(!t)return;const a=t.dataset.a,i=t.dataset.i,k=t.dataset.k;
+if(a==="home")go("list");else if(a==="admin")go("admin");else if(a==="new"){F=blank();go("edit")}
+else if(a==="open"){cur=i;go("view")}else if(a==="edit"){F=structuredClone(cf(cur));go("edit")}
+else if(a==="fav"){const f=cf(i);f.fav=f.fav?0:1;save();upd();t.textContent=f.fav?"♥":"♡"}
+else if(a==="chip"){fc=i;fav=0;render(1)}else if(a==="favf"){fav=fav?0:1;fc="";render(1)}
+else if(a==="st"){const f=cf(cur);f.st=f.st==="done"?"todo":"done";save();render(1)}
+else if(a==="delf"){if(askArm("f")){S.fiches=S.fiches.filter(f=>f.id!==cur);save();go("list")}}
+else if(a==="cancel"){if(cf(F.id)){cur=F.id;go("view")}else go("list")}
+else if(a==="save"){if(!F.title.trim())return toast("Ajoute un titre");F.title=F.title.trim();F.ts=Date.now();const j=S.fiches.findIndex(f=>f.id===F.id);j<0?S.fiches.unshift(F):S.fiches[j]=F;save();cur=F.id;go("view")}
+else if(a==="rmp"){F.ph[k].splice(i,1);render(1)}
+else if(a==="zoom"){const o=v==="edit"?F:cf(cur),d=document.createElement("div");d.id="lb";d.dataset.a="lb";d.innerHTML=`<img src="${o.ph[k][i]}" alt="">`;document.body.append(d)}
+else if(a==="lb")t.remove();
+else if(a==="addc"){const n=$("#ncn").value.trim();if(!n)return toast("Donne un nom");S.cats.push({id:uid(),emoji:$("#nce").value.trim()||"📁",name:n,fields:[]});save();render(1)}
+else if(a==="delc"){if(askArm(i)){S.cats=S.cats.filter(c=>c.id!==i);if(fc===i)fc="";save();arm="";render(1)}}
+else if(a==="exp"){const fn="trouvailles-"+new Date().toISOString().slice(0,10)+".json",bl=new Blob([JSON.stringify(S)],{type:"application/json"});try{const d=window.claude?await claude.use("downloads"):null;if(d)await d.save({filename:fn,data:bl});else{const u=URL.createObjectURL(bl),l=document.createElement("a");l.href=u;l.download=fn;document.body.append(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast("Sauvegarde exportée")}}catch(x){toast(x&&x.code==="declined"?"Export annulé":"Export impossible")}}
+});
+document.addEventListener("input",e=>{const t=e.target,d=t.dataset;if(t.id==="q"){q=t.value;upd()}
+else if(v==="edit"){if(d.k){F[d.k]=t.value;if(d.k==="cat")render(1)}else if(d.t)F.tx[d.t]=t.value;else if(d.x)F.ex[d.x]=t.value;else if("g"in d)F.tags=t.value.split(",").map(s=>s.trim()).filter(Boolean)}
+else if(d.ck){const c=S.cats.find(c=>c.id===t.closest("[data-c]").dataset.c);c[d.ck]=d.ck==="fields"?t.value.split(",").map(s=>s.trim()).filter(Boolean):t.value;save()}});
+document.addEventListener("change",async e=>{const t=e.target;
+if(t.dataset.p){const k=t.dataset.p,fs=[...t.files];t.value="";for(const f of fs){try{F.ph[k].push(await shrink(f))}catch(x){toast("Photo illisible")}}render(1)}
+else if(t.id==="imp"&&t.files[0]){try{const j=JSON.parse(await t.files[0].text());if(!Array.isArray(j.cats)||!Array.isArray(j.fiches))throw 0;j.cats.forEach(c=>{if(!S.cats.some(x=>x.id===c.id))S.cats.push(c)});j.fiches.forEach(f=>{const n=S.fiches.findIndex(x=>x.id===f.id);n<0?S.fiches.push(f):S.fiches[n]=f});save();render(1);toast("Import terminé")}catch(x){toast("Fichier non valide")}}});
+(async()=>{await idb();const d=await load();if(d&&d.cats&&d.fiches)S=d;render();
+if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}})();
+</script></body></html>
